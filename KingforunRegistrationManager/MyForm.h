@@ -11,10 +11,6 @@ namespace KingforunRegistrationManager {
 	using namespace System::IO;
 	using namespace System::Collections::Generic;
 
-	/// <summary>
-	/// Kingforun Registration Manager - Enhanced Version v2.2
-	/// Includes: CRUD, Search, Export/Import, Multi-Delete, Dedicated Buttons
-	/// </summary>
 	public ref class MyForm : public System::Windows::Forms::Form
 	{
 	public:
@@ -230,7 +226,7 @@ namespace KingforunRegistrationManager {
 			this->txtemail->Size = System::Drawing::Size(260, 20);
 			this->txtemail->TabIndex = 20;
 			// 
-			// textnomor
+			// textnomer
 			// 
 			this->textnomor->Location = System::Drawing::Point(100, 79);
 			this->textnomor->MaxLength = 15;
@@ -534,7 +530,6 @@ namespace KingforunRegistrationManager {
 		}
 #pragma endregion
 
-		// ==================== HELPER FUNCTIONS ====================
 
 	private: bool IsValidEmail(String^ email) {
 		try {
@@ -645,9 +640,6 @@ namespace KingforunRegistrationManager {
 		return fields->ToArray();
 	}
 
-		   // ==================== EVENT HANDLERS ====================
-
-		   // SAVE / UPDATE BUTTON
 	private: System::Void btn_enter_Click(System::Object^ sender, System::EventArgs^ e) {
 		if (String::IsNullOrWhiteSpace(txtnama->Text) || String::IsNullOrWhiteSpace(txtemail->Text) ||
 			String::IsNullOrWhiteSpace(textnomor->Text) || (!lk->Checked && !pr->Checked)) {
@@ -660,7 +652,6 @@ namespace KingforunRegistrationManager {
 			return;
 		}
 
-		// Duplicate Check
 		if (isEditMode) {
 			if (txtemail->Text->Trim()->ToLower() != editingEmailOriginal->Trim()->ToLower()) {
 				if (IsDuplicateEntry(txtemail->Text)) {
@@ -684,7 +675,6 @@ namespace KingforunRegistrationManager {
 		try {
 			this->Cursor = Cursors::WaitCursor;
 			if (isEditMode) {
-				// UPDATE LOGIC
 				array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
 				System::Collections::Generic::List<String^>^ newLines = gcnew System::Collections::Generic::List<String^>();
 				if (lines->Length > 0) newLines->Add(lines[0]);
@@ -706,7 +696,6 @@ namespace KingforunRegistrationManager {
 				MessageBox::Show("Data berhasil diperbarui!", "Sukses");
 			}
 			else {
-				// INSERT LOGIC
 				if (!System::IO::File::Exists(REGISTRATION_FILE)) {
 					System::IO::File::WriteAllText(REGISTRATION_FILE, "Nama,Email,Nomor,Jenis Kelamin,Tanggal Lahir,Alergi\n");
 				}
@@ -722,7 +711,6 @@ namespace KingforunRegistrationManager {
 		finally { this->Cursor = Cursors::Default; }
 	}
 
-		   // RESET BUTTON
 	private: System::Void btn_reset_Click(System::Object^ sender, System::EventArgs^ e) {
 		txtnama->Clear(); txtemail->Clear(); textnomor->Clear(); txtalergi->Clear();
 		lk->Checked = false; pr->Checked = false; birthDatePicker->Value = DateTime::Now;
@@ -731,7 +719,6 @@ namespace KingforunRegistrationManager {
 		groupBox1->Text = "Form Registrasi";
 	}
 
-		   // NEW: EDIT BUTTON LOGIC
 	private: System::Void btnEdit_Click(System::Object^ sender, System::EventArgs^ e) {
 		if (dataGridView1->SelectedRows->Count == 0) {
 			MessageBox::Show("Pilih data yang ingin diedit.", "Info", MessageBoxButtons::OK, MessageBoxIcon::Information);
@@ -764,7 +751,6 @@ namespace KingforunRegistrationManager {
 		groupBox1->Text = "Edit Data Peserta";
 	}
 
-		   // NEW: DELETE BUTTON LOGIC (SUPPORTS MULTIPLE ROWS)
 	private: System::Void btnDelete_Click(System::Object^ sender, System::EventArgs^ e) {
 		int selectedCount = dataGridView1->SelectedRows->Count;
 		if (selectedCount == 0) {
@@ -778,7 +764,6 @@ namespace KingforunRegistrationManager {
 
 		if (MessageBox::Show(msg, "Konfirmasi Hapus", MessageBoxButtons::YesNo, MessageBoxIcon::Warning) == System::Windows::Forms::DialogResult::Yes) {
 
-			// Collect emails to delete
 			System::Collections::Generic::List<String^>^ emailsToDelete = gcnew System::Collections::Generic::List<String^>();
 			for (int i = 0; i < selectedCount; i++) {
 				emailsToDelete->Add(dataGridView1->SelectedRows[i]->Cells[1]->Value->ToString());
@@ -796,7 +781,6 @@ namespace KingforunRegistrationManager {
 					if (fields->Length > 1) {
 						String^ currentEmail = UnescapeCSV(fields[1]);
 
-						// Check if current email matches ANY of the emails selected for deletion
 						bool matchFound = false;
 						for each(String ^ delEmail in emailsToDelete) {
 							if (currentEmail == delEmail) {
@@ -804,8 +788,6 @@ namespace KingforunRegistrationManager {
 								break;
 							}
 						}
-
-						// Only add if NOT found in delete list
 						if (!matchFound) {
 							newLines->Add(lines[i]);
 						}
@@ -816,7 +798,6 @@ namespace KingforunRegistrationManager {
 				MessageBox::Show("Data berhasil dihapus.", "Sukses", MessageBoxButtons::OK, MessageBoxIcon::Information);
 				LoadRegistrationData();
 
-				// Reset form if we deleted the item being edited
 				if (isEditMode) {
 					for each(String ^ delEmail in emailsToDelete) {
 						if (editingEmailOriginal == delEmail) {
@@ -832,7 +813,6 @@ namespace KingforunRegistrationManager {
 		}
 	}
 
-		   // SEARCH BUTTON
 	private: System::Void btnSearch_Click(System::Object^ sender, System::EventArgs^ e) {
 		String^ searchTerm = txtSearch->Text->Trim()->ToLower();
 		if (String::IsNullOrWhiteSpace(searchTerm)) {
@@ -862,7 +842,6 @@ namespace KingforunRegistrationManager {
 		catch (Exception^ ex) { MessageBox::Show("Error searching: " + ex->Message); }
 	}
 
-		   // OTHER MENUS
 	private: System::Void refreshDataToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
 		LoadRegistrationData();
 	}
@@ -894,11 +873,10 @@ namespace KingforunRegistrationManager {
 		}
 	}
 	private: System::Void statisticsToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		// Basic stats logic simplified for brevity
 		MessageBox::Show("Fitur statistik aktif.");
 	}
 	private: System::Void aboutToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		MessageBox::Show("Kingforun Registration v2.2\nDeveloped by Team");
+		MessageBox::Show("Kingforun Registration v1\nDeveloped by Team");
 	}
 	};
 }
