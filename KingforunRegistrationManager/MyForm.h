@@ -1,4 +1,5 @@
 #pragma once
+#include "ParticipantManager.h"
 
 namespace KingforunRegistrationManager {
 
@@ -8,36 +9,32 @@ namespace KingforunRegistrationManager {
 	using namespace System::Windows::Forms;
 	using namespace System::Data;
 	using namespace System::Drawing;
-	using namespace System::IO;
 	using namespace System::Collections::Generic;
 
 	public ref class MyForm : public System::Windows::Forms::Form
 	{
+	private:
+		ParticipantManager^ manager;
+
+		bool isEditMode = false;
+		String^ editingEmailOriginal = "";
+
 	public:
 		MyForm(void)
 		{
 			InitializeComponent();
+			manager = gcnew ParticipantManager();
 			LoadRegistrationData();
 		}
 
 	protected:
 		~MyForm()
 		{
-			if (components)
-			{
-				delete components;
-			}
+			if (components) delete components;
 		}
 
 	private:
-		// Constants
-		static String^ REGISTRATION_FILE = "registrations.csv";
-
-		// State Variables for Edit Mode
-		bool isEditMode = false;
-		String^ editingEmailOriginal = "";
-
-		// Controls
+		// --- Declaration of Controls (Auto Generated) ---
 		System::Windows::Forms::MenuStrip^ menuStrip1;
 		System::Windows::Forms::ToolStripMenuItem^ fileToolStripMenuItem;
 		System::Windows::Forms::ToolStripMenuItem^ importCSVToolStripMenuItem;
@@ -64,26 +61,19 @@ namespace KingforunRegistrationManager {
 		System::Windows::Forms::TextBox^ txtalergi;
 		System::Windows::Forms::Button^ btn_reset;
 		System::Windows::Forms::DataGridView^ dataGridView1;
-
-		// Search & Action Controls
 		System::Windows::Forms::TextBox^ txtSearch;
 		System::Windows::Forms::Label^ lblSearch;
 		System::Windows::Forms::Button^ btnSearch;
-		System::Windows::Forms::Button^ btnEdit;   // New Edit Button
-		System::Windows::Forms::Button^ btnDelete; // New Delete Button
-
+		System::Windows::Forms::Button^ btnEdit;
+		System::Windows::Forms::Button^ btnDelete;
 		System::Windows::Forms::Label^ lblTotalRecords;
 		System::Windows::Forms::GroupBox^ groupBox1;
 		System::Windows::Forms::GroupBox^ groupBox2;
-
-		// Context Menu
 		System::Windows::Forms::ContextMenuStrip^ contextMenuStrip1;
 		System::Windows::Forms::ToolStripMenuItem^ editRowMenuItem;
 		System::Windows::Forms::ToolStripMenuItem^ deleteRowMenuItem;
-	private: System::Windows::Forms::PictureBox^ pictureBox2;
-	private: System::ComponentModel::IContainer^ components;
-
-
+		System::Windows::Forms::PictureBox^ pictureBox2;
+		System::ComponentModel::IContainer^ components;
 
 #pragma region Windows Form Designer generated code
 		void InitializeComponent(void)
@@ -526,180 +516,77 @@ namespace KingforunRegistrationManager {
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->pictureBox2))->EndInit();
 			this->ResumeLayout(false);
 			this->PerformLayout();
-
 		}
 #pragma endregion
 
-
-	private: bool IsValidEmail(String^ email) {
-		try {
-			System::Net::Mail::MailAddress^ addr = gcnew System::Net::Mail::MailAddress(email);
-			return addr->Address == email;
-		}
-		catch (Exception^) {
-			return false;
-		}
-	}
-
-	private: bool IsValidPhoneNumber(String^ phone) {
-		String^ cleaned = phone->Replace(" ", "")->Replace("-", "")->Replace("+", "");
-		if (cleaned->Length < 10 || cleaned->Length > 15) return false;
-		for (int i = 0; i < cleaned->Length; i++) {
-			if (!Char::IsDigit(cleaned[i])) return false;
-		}
-		return true;
-	}
-
-	private: String^ EscapeCSV(String^ input) {
-		if (String::IsNullOrEmpty(input)) return "";
-		if (input->Contains(",") || input->Contains("\"") || input->Contains("\n")) {
-			return "\"" + input->Replace("\"", "\"\"") + "\"";
-		}
-		return input;
-	}
-
-	private: String^ UnescapeCSV(String^ input) {
-		if (String::IsNullOrEmpty(input)) return "";
-		String^ result = input->Trim();
-		if (result->StartsWith("\"") && result->EndsWith("\"")) {
-			result = result->Substring(1, result->Length - 2);
-			result = result->Replace("\"\"", "\"");
-		}
-		return result;
-	}
-
-	private: bool IsDuplicateEntry(String^ email) {
-		if (!System::IO::File::Exists(REGISTRATION_FILE)) return false;
-		try {
-			array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
-			for (int i = 1; i < lines->Length; i++) {
-				array<String^>^ fields = lines[i]->Split(',');
-				if (fields->Length > 1) {
-					String^ existingEmail = UnescapeCSV(fields[1])->Trim()->ToLower();
-					if (existingEmail == email->Trim()->ToLower()) return true;
-				}
-			}
-		}
-		catch (Exception^) { return false; }
-		return false;
-	}
-
 	private: void LoadRegistrationData() {
-		dataGridView1->Rows->Clear();
-		dataGridView1->Columns->Clear();
-
-		dataGridView1->Columns->Add("Nama", "Nama");
-		dataGridView1->Columns->Add("Email", "Email");
-		dataGridView1->Columns->Add("Nomor", "Nomor Telepon");
-		dataGridView1->Columns->Add("Gender", "Jenis Kelamin");
-		dataGridView1->Columns->Add("BirthDate", "Tanggal Lahir");
-		dataGridView1->Columns->Add("Alergi", "Alergi");
-
-		if (!System::IO::File::Exists(REGISTRATION_FILE)) {
-			lblTotalRecords->Text = "Total Records: 0";
-			return;
-		}
-
-		try {
-			array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
-			for (int i = 1; i < lines->Length; i++) {
-				if (String::IsNullOrWhiteSpace(lines[i])) continue;
-				array<String^>^ fields = ParseCSVLine(lines[i]);
-				if (fields->Length >= 6) {
-					dataGridView1->Rows->Add(
-						UnescapeCSV(fields[0]), UnescapeCSV(fields[1]), UnescapeCSV(fields[2]),
-						UnescapeCSV(fields[3]), UnescapeCSV(fields[4]), UnescapeCSV(fields[5])
-					);
-				}
-			}
-			lblTotalRecords->Text = "Total Records: " + (lines->Length - 1).ToString();
-		}
-		catch (Exception^ ex) {
-			MessageBox::Show("Error loading data: " + ex->Message);
-		}
+		LoadDataToList(manager->GetAllParticipants());
 	}
 
-	private: array<String^>^ ParseCSVLine(String^ line) {
-		System::Collections::Generic::List<String^>^ fields = gcnew System::Collections::Generic::List<String^>();
-		bool inQuotes = false;
-		String^ currentField = "";
-		for (int i = 0; i < line->Length; i++) {
-			wchar_t c = line[i];
-			if (c == '"') {
-				if (i + 1 < line->Length && line[i + 1] == '"') {
-					currentField += "\""; i++;
-				}
-				else inQuotes = !inQuotes;
-			}
-			else if (c == ',' && !inQuotes) {
-				fields->Add(currentField); currentField = "";
-			}
-			else currentField += c;
+	private: void LoadDataToList(List<Participant^>^ list) {
+		dataGridView1->Rows->Clear();
+
+		// Ensure columns exist (Defensive coding)
+		if (dataGridView1->Columns->Count == 0) {
+			dataGridView1->Columns->Add("Nama", "Nama");
+			dataGridView1->Columns->Add("Email", "Email");
+			dataGridView1->Columns->Add("Nomor", "Nomor Telepon");
+			dataGridView1->Columns->Add("Gender", "Jenis Kelamin");
+			dataGridView1->Columns->Add("BirthDate", "Tanggal Lahir");
+			dataGridView1->Columns->Add("Alergi", "Alergi");
 		}
-		fields->Add(currentField);
-		return fields->ToArray();
+
+		for each (Participant ^ p in list) {
+			dataGridView1->Rows->Add(
+				p->Nama, p->Email, p->NomorTelepon,
+				p->Gender, p->TanggalLahir.ToShortDateString(), p->Alergi
+			);
+		}
+		lblTotalRecords->Text = "Total Records: " + list->Count;
 	}
 
 	private: System::Void btn_enter_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (String::IsNullOrWhiteSpace(txtnama->Text) || String::IsNullOrWhiteSpace(txtemail->Text) ||
-			String::IsNullOrWhiteSpace(textnomor->Text) || (!lk->Checked && !pr->Checked)) {
+		if (txtnama->Text == "" || txtemail->Text == "" || textnomor->Text == "" || (!lk->Checked && !pr->Checked)) {
 			MessageBox::Show("Semua kolom harus diisi!", "Validasi", MessageBoxButtons::OK, MessageBoxIcon::Warning);
 			return;
 		}
 
-		if (!IsValidEmail(txtemail->Text)) {
+		if (!manager->IsValidEmail(txtemail->Text)) {
 			MessageBox::Show("Email tidak valid!", "Validasi", MessageBoxButtons::OK, MessageBoxIcon::Warning);
 			return;
 		}
 
 		if (isEditMode) {
 			if (txtemail->Text->Trim()->ToLower() != editingEmailOriginal->Trim()->ToLower()) {
-				if (IsDuplicateEntry(txtemail->Text)) {
+				if (manager->IsDuplicate(txtemail->Text)) {
 					MessageBox::Show("Email baru ini sudah terdaftar!", "Error", MessageBoxButtons::OK, MessageBoxIcon::Warning);
 					return;
 				}
 			}
 		}
 		else {
-			if (IsDuplicateEntry(txtemail->Text)) {
+			if (manager->IsDuplicate(txtemail->Text)) {
 				MessageBox::Show("Email sudah terdaftar!", "Error", MessageBoxButtons::OK, MessageBoxIcon::Warning);
 				return;
 			}
 		}
 
-		String^ gender = lk->Checked ? "Laki-Laki" : "Perempuan";
-		String^ csvLine = String::Format("{0},{1},{2},{3},{4},{5}",
-			EscapeCSV(txtnama->Text->Trim()), EscapeCSV(txtemail->Text->Trim()), EscapeCSV(textnomor->Text->Trim()),
-			gender, birthDatePicker->Value.ToString("dd/MM/yyyy"), EscapeCSV(txtalergi->Text->Trim()));
+		Participant^ p = gcnew Participant();
+		p->Nama = txtnama->Text->Trim();
+		p->Email = txtemail->Text->Trim();
+		p->NomorTelepon = textnomor->Text->Trim();
+		p->Gender = lk->Checked ? "Laki-Laki" : "Perempuan";
+		p->TanggalLahir = birthDatePicker->Value;
+		p->Alergi = txtalergi->Text->Trim();
 
 		try {
 			this->Cursor = Cursors::WaitCursor;
 			if (isEditMode) {
-				array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
-				System::Collections::Generic::List<String^>^ newLines = gcnew System::Collections::Generic::List<String^>();
-				if (lines->Length > 0) newLines->Add(lines[0]);
-
-				for (int i = 1; i < lines->Length; i++) {
-					if (String::IsNullOrWhiteSpace(lines[i])) continue;
-					array<String^>^ fields = ParseCSVLine(lines[i]);
-					if (fields->Length > 1) {
-						String^ currentEmail = UnescapeCSV(fields[1]);
-						if (currentEmail->Trim()->ToLower() == editingEmailOriginal->Trim()->ToLower()) {
-							newLines->Add(csvLine);
-						}
-						else {
-							newLines->Add(lines[i]);
-						}
-					}
-				}
-				System::IO::File::WriteAllLines(REGISTRATION_FILE, newLines->ToArray());
+				manager->UpdateParticipant(editingEmailOriginal, p);
 				MessageBox::Show("Data berhasil diperbarui!", "Sukses");
 			}
 			else {
-				if (!System::IO::File::Exists(REGISTRATION_FILE)) {
-					System::IO::File::WriteAllText(REGISTRATION_FILE, "Nama,Email,Nomor,Jenis Kelamin,Tanggal Lahir,Alergi\n");
-				}
-				System::IO::File::AppendAllText(REGISTRATION_FILE, csvLine + "\n");
+				manager->AddParticipant(p);
 				MessageBox::Show("Data berhasil disimpan!", "Sukses");
 			}
 			LoadRegistrationData();
@@ -708,7 +595,9 @@ namespace KingforunRegistrationManager {
 		catch (Exception^ ex) {
 			MessageBox::Show("Error: " + ex->Message);
 		}
-		finally { this->Cursor = Cursors::Default; }
+		finally {
+			this->Cursor = Cursors::Default;
+		}
 	}
 
 	private: System::Void btn_reset_Click(System::Object^ sender, System::EventArgs^ e) {
@@ -720,16 +609,7 @@ namespace KingforunRegistrationManager {
 	}
 
 	private: System::Void btnEdit_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (dataGridView1->SelectedRows->Count == 0) {
-			MessageBox::Show("Pilih data yang ingin diedit.", "Info", MessageBoxButtons::OK, MessageBoxIcon::Information);
-			return;
-		}
-
-		if (dataGridView1->SelectedRows->Count > 1) {
-			MessageBox::Show("Hanya bisa mengedit 1 data dalam satu waktu.\nSilakan pilih satu baris saja.",
-				"Info", MessageBoxButtons::OK, MessageBoxIcon::Warning);
-			return;
-		}
+		if (dataGridView1->SelectedRows->Count == 0) return;
 
 		DataGridViewRow^ row = dataGridView1->SelectedRows[0];
 		txtnama->Text = row->Cells[0]->Value->ToString();
@@ -746,137 +626,63 @@ namespace KingforunRegistrationManager {
 
 		isEditMode = true;
 		editingEmailOriginal = txtemail->Text;
-		btn_enter->Text = "Update";
-		btn_enter->BackColor = System::Drawing::Color::LightBlue;
+		btn_enter->Text = "Update"; btn_enter->BackColor = System::Drawing::Color::LightBlue;
 		groupBox1->Text = "Edit Data Peserta";
 	}
 
 	private: System::Void btnDelete_Click(System::Object^ sender, System::EventArgs^ e) {
-		int selectedCount = dataGridView1->SelectedRows->Count;
-		if (selectedCount == 0) {
-			MessageBox::Show("Pilih data yang ingin dihapus.", "Info", MessageBoxButtons::OK, MessageBoxIcon::Information);
-			return;
-		}
+		if (dataGridView1->SelectedRows->Count == 0) return;
 
-		String^ msg = (selectedCount == 1)
-			? "Apakah Anda yakin ingin menghapus data ini?"
-			: "Apakah Anda yakin ingin menghapus " + selectedCount + " data yang dipilih?";
-
-		if (MessageBox::Show(msg, "Konfirmasi Hapus", MessageBoxButtons::YesNo, MessageBoxIcon::Warning) == System::Windows::Forms::DialogResult::Yes) {
-
-			System::Collections::Generic::List<String^>^ emailsToDelete = gcnew System::Collections::Generic::List<String^>();
-			for (int i = 0; i < selectedCount; i++) {
+		if (MessageBox::Show("Hapus data terpilih?", "Konfirmasi", MessageBoxButtons::YesNo) == System::Windows::Forms::DialogResult::Yes) {
+			List<String^>^ emailsToDelete = gcnew List<String^>();
+			for (int i = 0; i < dataGridView1->SelectedRows->Count; i++) {
 				emailsToDelete->Add(dataGridView1->SelectedRows[i]->Cells[1]->Value->ToString());
 			}
 
-			try {
-				array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
-				System::Collections::Generic::List<String^>^ newLines = gcnew System::Collections::Generic::List<String^>();
+			manager->DeleteParticipants(emailsToDelete);
 
-				if (lines->Length > 0) newLines->Add(lines[0]); // Header
+			MessageBox::Show("Data dihapus.");
+			LoadRegistrationData();
 
-				for (int i = 1; i < lines->Length; i++) {
-					if (String::IsNullOrWhiteSpace(lines[i])) continue;
-					array<String^>^ fields = ParseCSVLine(lines[i]);
-					if (fields->Length > 1) {
-						String^ currentEmail = UnescapeCSV(fields[1]);
-
-						bool matchFound = false;
-						for each(String ^ delEmail in emailsToDelete) {
-							if (currentEmail == delEmail) {
-								matchFound = true;
-								break;
-							}
-						}
-						if (!matchFound) {
-							newLines->Add(lines[i]);
-						}
-					}
-				}
-
-				System::IO::File::WriteAllLines(REGISTRATION_FILE, newLines->ToArray());
-				MessageBox::Show("Data berhasil dihapus.", "Sukses", MessageBoxButtons::OK, MessageBoxIcon::Information);
-				LoadRegistrationData();
-
-				if (isEditMode) {
-					for each(String ^ delEmail in emailsToDelete) {
-						if (editingEmailOriginal == delEmail) {
-							btn_reset_Click(nullptr, nullptr);
-							break;
-						}
-					}
-				}
-			}
-			catch (Exception^ ex) {
-				MessageBox::Show("Error menghapus data: " + ex->Message);
+			if (isEditMode && emailsToDelete->Contains(editingEmailOriginal)) {
+				btn_reset_Click(nullptr, nullptr);
 			}
 		}
 	}
 
 	private: System::Void btnSearch_Click(System::Object^ sender, System::EventArgs^ e) {
-		String^ searchTerm = txtSearch->Text->Trim()->ToLower();
-		if (String::IsNullOrWhiteSpace(searchTerm)) {
-			LoadRegistrationData(); return;
+		String^ term = txtSearch->Text->Trim();
+		if (String::IsNullOrWhiteSpace(term)) {
+			LoadRegistrationData();
 		}
-		dataGridView1->Rows->Clear();
-		if (!System::IO::File::Exists(REGISTRATION_FILE)) return;
-
-		try {
-			array<String^>^ lines = System::IO::File::ReadAllLines(REGISTRATION_FILE);
-			int foundCount = 0;
-			for (int i = 1; i < lines->Length; i++) {
-				if (String::IsNullOrWhiteSpace(lines[i])) continue;
-				if (lines[i]->ToLower()->Contains(searchTerm)) {
-					array<String^>^ fields = ParseCSVLine(lines[i]);
-					if (fields->Length >= 6) {
-						dataGridView1->Rows->Add(
-							UnescapeCSV(fields[0]), UnescapeCSV(fields[1]), UnescapeCSV(fields[2]),
-							UnescapeCSV(fields[3]), UnescapeCSV(fields[4]), UnescapeCSV(fields[5])
-						);
-						foundCount++;
-					}
-				}
-			}
-			lblTotalRecords->Text = "Found Records: " + foundCount.ToString();
+		else {
+			LoadDataToList(manager->SearchParticipants(term));
 		}
-		catch (Exception^ ex) { MessageBox::Show("Error searching: " + ex->Message); }
 	}
 
-	private: System::Void refreshDataToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		LoadRegistrationData();
-	}
-	private: System::Void exitToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		Application::Exit();
-	}
-	private: System::Void exportCSVToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (!System::IO::File::Exists(REGISTRATION_FILE)) return;
-		SaveFileDialog^ saveDialog = gcnew SaveFileDialog();
-		saveDialog->Filter = "CSV Files|*.csv";
-		saveDialog->FileName = "export_" + DateTime::Now.ToString("yyyyMMdd") + ".csv";
-		if (saveDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-			System::IO::File::Copy(REGISTRATION_FILE, saveDialog->FileName, true);
-			MessageBox::Show("Export Sukses!");
-		}
-	}
 	private: System::Void importCSVToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
 		OpenFileDialog^ openDialog = gcnew OpenFileDialog();
 		openDialog->Filter = "CSV Files|*.csv";
 		if (openDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-			array<String^>^ lines = System::IO::File::ReadAllLines(openDialog->FileName);
-			if (!System::IO::File::Exists(REGISTRATION_FILE))
-				System::IO::File::WriteAllText(REGISTRATION_FILE, "Nama,Email,Nomor,Jenis Kelamin,Tanggal Lahir,Alergi\n");
-			for (int i = 1; i < lines->Length; i++) {
-				if (!String::IsNullOrWhiteSpace(lines[i])) System::IO::File::AppendAllText(REGISTRATION_FILE, lines[i] + "\n");
-			}
+			manager->ImportCSV(openDialog->FileName);
 			LoadRegistrationData();
 			MessageBox::Show("Import Sukses!");
 		}
 	}
-	private: System::Void statisticsToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		MessageBox::Show("Fitur statistik aktif.");
+
+	private: System::Void exportCSVToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
+		SaveFileDialog^ saveDialog = gcnew SaveFileDialog();
+		saveDialog->Filter = "CSV Files|*.csv";
+		saveDialog->FileName = "export_" + DateTime::Now.ToString("yyyyMMdd") + ".csv";
+		if (saveDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
+			manager->ExportCSV(saveDialog->FileName);
+			MessageBox::Show("Export Sukses!");
+		}
 	}
-	private: System::Void aboutToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) {
-		MessageBox::Show("Kingforun Registration v1\nDeveloped by Team");
-	}
+
+	private: System::Void refreshDataToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) { LoadRegistrationData(); }
+	private: System::Void exitToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) { Application::Exit(); }
+	private: System::Void statisticsToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) { MessageBox::Show("Fitur statistik aktif."); }
+	private: System::Void aboutToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) { MessageBox::Show("Kingforun Registration v1"); }
 	};
 }

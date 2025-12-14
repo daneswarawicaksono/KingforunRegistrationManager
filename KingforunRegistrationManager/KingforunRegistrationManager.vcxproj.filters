@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source.cpp">
+    <ClCompile Include="ParticipantManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MyForm.cpp">
@@ -24,6 +24,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyForm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Participant.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticipantManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
